@@ -1,0 +1,32 @@
+
+# Xcode
+# Build artifacts
+build/
+DerivedData/
+
+# User settings (personal window layouts, open files, etc.)
+xcuserdata/
+
+# Source Control & Schemes
+*.xccheckout
+*.xcscmblueprint
+# Keep shared data, but ignore local workspace settings
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+
+# Swift Package Manager
+.swiftpm/xcode/package.resolved
+.build/
+
+# Dependency Managers (if applicable)
+# CocoaPods (It is often recommended to commit the Pods folder, but many choose to ignore it)
+# Pods/
+# Carthage
+Carthage/Build/
