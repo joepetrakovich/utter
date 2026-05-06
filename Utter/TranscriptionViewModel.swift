@@ -24,7 +24,8 @@ enum TranscriptionEvent {
 struct TranscriptionUiState {
     var isRegisteringHotKey: Bool = false
     var hotKey: String? = nil
-    var isRecording: Bool = false
+    var isHotKeyPressed: Bool = false
+    var isRecording: Bool = false //TODO: hook this up so its true to the recorder and stays in sync
     var transcriptions: [Transcription] = []
 }
 
@@ -46,10 +47,11 @@ struct TranscriptionUiState {
             refreshHistory()
         }
         
-        //TODO: set hotkeyregstate based on userdefaults
+        loadHotKeyState()
     }
     
-    var hotKey: (modifier: ModifierKey, key: UInt16?)? {
+    
+    var hotKey: (modifier: ModifierKey, key: NonModifierKey?)? {
         guard case .registered(let modifier, let key) = hotKeyRegistrationState.currentState else {
             return nil
         }
@@ -69,8 +71,10 @@ struct TranscriptionUiState {
     func handleEvent(_ event: TranscriptionEvent) {
         switch event {
         case .hotkeyPressed:
+            uiState.isHotKeyPressed = true
             startRecording()
         case .hotkeyReleased:
+            uiState.isHotKeyPressed = false
             stopRecording()
         case .historyEntryClicked(entry: let entry):
             insertHistoryEntry(entry)
@@ -84,8 +88,8 @@ struct TranscriptionUiState {
             if case .registered(let modifier, let key) = hotKeyRegistrationState.currentState {
                 uiState.isRegisteringHotKey = false
                 print("hotkey set: \(hotKeyRegistrationState.currentState)")
-                
-                uiState.hotKey = "\(modifier.side.rawValue) \(modifier.mask.rawValue) + \(key, default: "none")"
+                uiState.hotKey = "\(modifier.display(includeSide: key == nil))\(key?.character.uppercased() ?? "")"
+                saveHotKey()
             }
         case .registerHotkeyFocusOut:
             uiState.isRegisteringHotKey = false
@@ -98,6 +102,7 @@ struct TranscriptionUiState {
             print("recorder was still running")
             return
         }
+        
         //might need guards to throw away rapid clicks
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
@@ -176,18 +181,51 @@ struct TranscriptionUiState {
         vDown?.post(tap: .cghidEventTap)
         vUp?.post(tap: .cghidEventTap)
     }
+
+    private func saveHotKey() {
+        guard let hotKey = hotKey else { return }
+        let defaults = UserDefaults.standard
+        defaults.set(hotKey.modifier.mask.rawValue, forKey: "hotKeyModifier")
+        defaults.set(hotKey.modifier.side.rawValue, forKey: "hotKeyModifierSide")
+        if let key = hotKey.key {
+            defaults.set(key.keyCode, forKey: "hotKeyKeyCode")
+            defaults.set(key.character, forKey: "hotKeyCharacter")
+        }
+    }
+
+    private func loadHotKeyState() {
+        guard let mask = UserDefaults.standard.object(forKey: "hotKeyModifier") as? UInt,
+              let sideRaw = UserDefaults.standard.string(forKey: "hotKeyModifierSide") else {
+            return
+        }
+        let modifier = ModifierKey(
+            mask: NSEvent.ModifierFlags(rawValue: mask),
+            side: Side(rawValue: sideRaw) ?? .left
+        )
+        
+        guard let keyCode = UserDefaults.standard.object(forKey: "hotKeyKeyCode") as? UInt16,
+        let character = UserDefaults.standard.string(forKey: "hotKeyCharacter")
+        else {
+            hotKeyRegistrationState.currentState = .registered(modifier, nil)
+            uiState.hotKey = modifier.display(includeSide: true)
+            return
+        }
+        
+        hotKeyRegistrationState.currentState = .registered(modifier, NonModifierKey(keyCode: keyCode, character: character))
+        uiState.hotKey = modifier.display() + character.uppercased()
+    }
 }
 
 
 enum HotKeyRegistrationState: Equatable {
     case idle
     case awaitingResult(ModifierKey)
-    case registered(ModifierKey, key: UInt16? = nil)
+    case registered(ModifierKey, NonModifierKey? = nil)
 }
 
 enum HotkeyRegistrationEvent {
     case modifierDown(ModifierKey)
-    case keyPlusModifierDown(key: UInt16, modifier: ModifierKey)
+    case keyPlusModifierDown(key: NonModifierKey, modifier: ModifierKey)
     case modifierUp(ModifierKey)
 }
 
@@ -200,11 +238,11 @@ class HotKeyRegistrationStateMachine {
         case (.idle, .modifierDown(let modifier)):
             currentState = .awaitingResult(modifier)
             
-        case (.awaitingResult, .keyPlusModifierDown(let keyCode, let modifier)):
-            currentState = .registered(modifier, key: keyCode)
+        case (.awaitingResult, .keyPlusModifierDown(let key, let modifier)):
+            currentState = .registered(modifier, key)
             
         case (.awaitingResult, .modifierUp(let modifier)):
-            currentState = .registered(modifier, key: nil)
+            currentState = .registered(modifier, nil)
             
         default:
             break

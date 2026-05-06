@@ -105,8 +105,9 @@ func handleTappedEvent(
     if vm.uiState.isRegisteringHotKey {
         if nsEvent.type == .keyDown,
         let modifier = modifierAndSideByModifierKeyCode.first(where: { nsEvent.modifierFlags.contains($0.value.mask) }) {
+            let nonModifierKey = NonModifierKey(keyCode: nsEvent.keyCode, character: nsEvent.charactersIgnoringModifiers ?? "unknown")
             vm.handleEvent(
-                .hotkeyRegistrationEventFired(event: .keyPlusModifierDown(key: nsEvent.keyCode, modifier: modifier.value))
+                .hotkeyRegistrationEventFired(event: .keyPlusModifierDown(key: nonModifierKey, modifier: modifier.value))
             )
         }
       
@@ -134,16 +135,33 @@ func handleTappedEvent(
         vm.handleEvent(isKeyDown ? .hotkeyPressed : .hotkeyReleased)
         return nil
     }
-    
+   
     //mod + key
-    if [.keyDown, .keyUp].contains(nsEvent.type), nsEvent.modifierFlags.contains(hotKey.modifier.mask), hotKey.key == nsEvent.keyCode {
-        vm.handleEvent(nsEvent.type == .keyDown ? .hotkeyPressed : .hotkeyReleased)
+    guard let key = hotKey.key, key.keyCode == nsEvent.keyCode else {
+        return Unmanaged.passUnretained(cgEvent)
+    }
+    
+    print(nsEvent)
+
+    if nsEvent.type == .keyDown, nsEvent.modifierFlags.contains(hotKey.modifier.mask)
+    {
+        vm.handleEvent(.hotkeyPressed)
+        return nil
+    }
+    
+    if nsEvent.type == .keyUp, vm.uiState.isHotKeyPressed
+    {
+        vm.handleEvent(.hotkeyReleased)
         return nil
     }
 
     return Unmanaged.passUnretained(cgEvent)
 }
 
+struct NonModifierKey: Equatable {
+    let keyCode: UInt16
+    let character: String
+}
 enum Side: String {
     case left
     case right
@@ -151,6 +169,18 @@ enum Side: String {
 struct ModifierKey: Equatable {
     let mask: NSEvent.ModifierFlags
     let side: Side
+
+    func display(includeSide: Bool = false) -> String {
+        let base = switch mask {
+        case .shift: "⇧"
+        case .control: "⌃"
+        case .option: "⌥"
+        case .command: "⌘"
+        default: ""
+        }
+        guard includeSide else { return base }
+        return (side == .left ? "(left) " : "(right) ") + base
+    }
 }
 let modifierAndSideByModifierKeyCode: [UInt16: ModifierKey] = [
     0x38: .init(mask: .shift, side: .left),

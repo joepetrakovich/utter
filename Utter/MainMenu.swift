@@ -83,6 +83,11 @@ struct MainMenuContent: View {
             HStack {
                 Text("Hotkey")
                 Spacer()
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 8, height: 8)
+                    .opacity(uiState.isHotKeyPressed ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.15), value: uiState.isHotKeyPressed)
                 TextField(uiState.hotKey ?? "None",
                           text: .constant(""),
                           onEditingChanged: { onEvent($0 ? .registerHotkeyFocused : .registerHotkeyFocusOut)}
@@ -158,6 +163,7 @@ struct MyButtonStyle: ButtonStyle {
     MainMenuContent(
         uiState: .init(
             isRegisteringHotKey: true,
+            isHotKeyPressed: true,
             isRecording: false,
             transcriptions: [
                 .init(timestamp: Date(), text: "Hello, this is a sample transcription"),
