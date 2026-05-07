@@ -25,8 +25,8 @@ struct TranscriptionUiState {
     var isRegisteringHotKey: Bool = false
     var hotKey: String? = nil
     var isHotKeyPressed: Bool = false
-    var isRecording: Bool = false //TODO: hook this up so its true to the recorder and stays in sync
     var transcriptions: [Transcription] = []
+    var isDownloadingAndLoadingModels: Bool = false
 }
 
 @Observable class TranscriptionViewModel {
@@ -39,12 +39,16 @@ struct TranscriptionUiState {
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        uiState.isDownloadingAndLoadingModels = true
         
         Task {
-            let models = try await AsrModels.downloadAndLoad(version: .v2)  //TODO: offline
+            let models = try await AsrModels.downloadAndLoad(version: .v2) 
             try await asrManager.loadModels(models)
             
-            refreshHistory()
+            await MainActor.run {
+                refreshHistory()
+                uiState.isDownloadingAndLoadingModels = false
+            }
         }
         
         loadHotKeyState()
@@ -97,38 +101,32 @@ struct TranscriptionUiState {
     }
     
     private func startRecording() {
-        print("pressed")
         if recorder.isRunning {
-            print("recorder was still running")
+            print("recorder is still running")
             return
         }
         
-        //might need guards to throw away rapid clicks
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
-            print("authorized")
             recorder.start()
 
         case .notDetermined:
-            print("notDetermined")
             AVCaptureDevice.requestAccess(for: .audio) { granted in
                 if granted {
-                    print("granted")
                     self.recorder.start()
                 }
             }
 
         case .denied:
-            print("denied")
+            print("audio capture authorization was denied")
         case .restricted:
-            print("restricted")
+            print("audio capture authorization is restricted")
         @unknown default:
-            print("unknown")
+            print("audio capture authorization failed in an unkown state")
         }
     }
     
     private func stopRecording() {
-        print("released")
         if recorder.isRunning, let audioBuffer = recorder.stopAndGetBuffer() {
             Task {
                 var decoderState = try TdtDecoderState()
@@ -190,12 +188,16 @@ struct TranscriptionUiState {
         if let key = hotKey.key {
             defaults.set(key.keyCode, forKey: "hotKeyKeyCode")
             defaults.set(key.character, forKey: "hotKeyCharacter")
+        } else {
+            defaults.removeObject(forKey: "hotKeyKeyCode")
+            defaults.removeObject(forKey: "hotKeyCharacter")
         }
     }
 
     private func loadHotKeyState() {
         guard let mask = UserDefaults.standard.object(forKey: "hotKeyModifier") as? UInt,
               let sideRaw = UserDefaults.standard.string(forKey: "hotKeyModifierSide") else {
+            print("guard")
             return
         }
         let modifier = ModifierKey(
@@ -208,9 +210,11 @@ struct TranscriptionUiState {
         else {
             hotKeyRegistrationState.currentState = .registered(modifier, nil)
             uiState.hotKey = modifier.display(includeSide: true)
+            print("guard2")
             return
         }
-        
+        print("here")
+
         hotKeyRegistrationState.currentState = .registered(modifier, NonModifierKey(keyCode: keyCode, character: character))
         uiState.hotKey = modifier.display() + character.uppercased()
     }
@@ -229,6 +233,9 @@ enum HotkeyRegistrationEvent {
     case modifierUp(ModifierKey)
 }
 
+//Down on a modifier starts the awaiting state.
+//From there, either a mod+key will set it OR a single modifier UP, whichever comes first.
+//This only allows either a single modifier or a modifier plus a character to be used.
 class HotKeyRegistrationStateMachine {
     var currentState: HotKeyRegistrationState = .idle
 

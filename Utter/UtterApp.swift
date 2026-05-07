@@ -141,8 +141,6 @@ func handleTappedEvent(
         return Unmanaged.passUnretained(cgEvent)
     }
     
-    print(nsEvent)
-
     if nsEvent.type == .keyDown, nsEvent.modifierFlags.contains(hotKey.modifier.mask)
     {
         vm.handleEvent(.hotkeyPressed)
@@ -179,7 +177,7 @@ struct ModifierKey: Equatable {
         default: ""
         }
         guard includeSide else { return base }
-        return (side == .left ? "(left) " : "(right) ") + base
+        return (side == .left ? "Left " : "Right ") + base
     }
 }
 let modifierAndSideByModifierKeyCode: [UInt16: ModifierKey] = [

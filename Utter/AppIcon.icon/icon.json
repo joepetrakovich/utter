@@ -1,0 +1,86 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.16461,0.44417,0.71414,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "AppIcon_ellipse29.png",
+          "name" : "AppIcon_ellipse29",
+          "opacity" : 0.18,
+          "position" : {
+            "scale" : 0.88,
+            "translation-in-points" : [
+              233.125,
+              13.4765625
+            ]
+          }
+        },
+        {
+          "image-name" : "AppIcon_ellipse28.png",
+          "name" : "AppIcon_ellipse28",
+          "opacity" : 0.37,
+          "position" : {
+            "scale" : 0.84,
+            "translation-in-points" : [
+              124.4609375,
+              0
+            ]
+          }
+        },
+        {
+          "image-name" : "AppIcon_ellipse27.png",
+          "name" : "AppIcon_ellipse27",
+          "opacity" : 0.54,
+          "position" : {
+            "scale" : 0.81,
+            "translation-in-points" : [
+              8.2578125,
+              0
+            ]
+          }
+        },
+        {
+          "image-name" : "AppIcon_path27.png",
+          "name" : "AppIcon_path27",
+          "opacity" : 0.67,
+          "position" : {
+            "scale" : 0.84,
+            "translation-in-points" : [
+              -139.953125,
+              0
+            ]
+          }
+        },
+        {
+          "fill" : "automatic",
+          "image-name" : "AppIcon_ellipse30.png",
+          "name" : "AppIcon_ellipse30",
+          "opacity" : 0.72,
+          "position" : {
+            "scale" : 0.96,
+            "translation-in-points" : [
+              -300.125,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

@@ -37,7 +37,7 @@ class AudioRecorder {
             print("starting engine")
             try engine.start()
         } catch {
-            print(error) //TODO maybe best to throw
+            print(error)
         }
     }
     

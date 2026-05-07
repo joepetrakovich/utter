@@ -24,7 +24,6 @@ struct MainMenuContent: View {
     let onEvent: (TranscriptionEvent) -> Void
     
     @State private var showHistory = true
-    @State private var recentlyClicked: Transcription?
     @FocusState private var isHotkeyFocused: Bool
     
     init(
@@ -38,46 +37,24 @@ struct MainMenuContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             
+            if uiState.isDownloadingAndLoadingModels {
+                HStack {
+                    Text("Loading models...")
+                        .opacity(0.6)
+                        .padding(.leading, 8)
+                        .frame(minHeight: 28)
+                    Spacer()
+                    ProgressView()
+                        .scaleEffect(0.5)
+                }
+            }
+            
             if !uiState.transcriptions.isEmpty {
-                Text("Recent Transcriptions")
-                    .padding(.horizontal, 8)
-                    .padding(.top, 4)
-                    .font(.headline)
-                    .opacity(0.6)
-                
-                ForEach(uiState.transcriptions, id: \.self) { t in
-                    Button {
-                        onEvent(.historyEntryClicked(entry: t))
-                        recentlyClicked = t
-                        Task {
-                            try await Task.sleep(for: .seconds(1))
-                            recentlyClicked = nil
-                        }
-                    } label: {
-                        HStack {
-                            Text(t.text)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            if recentlyClicked === t {
-                                Image(systemName: "checkmark")
-                                    .opacity(0.6)
-                            } else {
-                                Image(systemName: "document.on.document")
-                                    .opacity(0.6)
-                            }
-                        }.frame(minHeight: 18)
-                            .help(t.text)
-                    }
-                
-                }
-                
-                Button {
-                    onEvent(.historyClearClicked)
-                } label: {
-                    Text("Clear Recents")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                
-                Divider().padding(.horizontal, 8)
+                HistoryMenu(
+                    transcriptions: uiState.transcriptions,
+                    onTranscriptionClicked: { onEvent(.historyEntryClicked(entry: $0)) },
+                    onClearHistoryClicked: { onEvent(.historyClearClicked) }
+                )
             }
             
             HStack {
@@ -118,13 +95,83 @@ struct MainMenuContent: View {
             }
         }
         .padding(6)
-        .frame(maxWidth: 240, alignment: .leading)
+        .frame(maxWidth: 200, alignment: .leading)
         .buttonBorderShape(.capsule)
-        .buttonStyle(MyButtonStyle())
+        .buttonStyle(MenuLikeButtonStyle())
     }
 }
 
-struct MyButtonStyle: ButtonStyle {
+struct TruncatedText: View {
+    let text: String
+    let numChars: Int
+    
+    var body: some View {
+        Text(truncatedText)
+    }
+    
+    private var truncatedText: String {
+        guard text.count > numChars else {
+            return text
+        }
+        
+        let ellipsis = "..."
+        let availableChars = numChars - ellipsis.count
+        
+        guard availableChars > 0 else {
+            return ellipsis
+        }
+        
+        let prefix = String(text.prefix(availableChars))
+        
+        if let lastSpace = prefix.lastIndex(of: " ") {
+            let truncated = String(prefix.prefix(upTo: lastSpace))
+            return truncated + ellipsis
+        }
+        
+        return prefix + ellipsis
+    }
+}
+
+struct HistoryMenu: View {
+    var transcriptions: [Transcription]
+    let onTranscriptionClicked: (Transcription) -> Void
+    let onClearHistoryClicked: () -> Void
+    
+    var body: some View {
+        
+        Menu {
+            ForEach(transcriptions, id: \.self) { t in
+                Button {
+                    onTranscriptionClicked(t)
+                } label: {
+                    TruncatedText(text: t.text, numChars: 50)
+                    Image(systemName: "document.on.document")
+                        .opacity(0.6)
+                }
+                .help(t.text)
+            }
+            
+            Button {
+                onClearHistoryClicked()
+            } label: {
+                Text("Clear History")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }label: {
+            HStack {
+                Text("History")
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 10, height: 10)
+                    .fontWeight(.bold)
+            }
+        }
+    }
+}
+
+struct MenuLikeButtonStyle: ButtonStyle {
     @State private var isHovered = false
     
     func makeBody(configuration: Configuration) -> some View {
@@ -141,35 +188,17 @@ struct MyButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    Menu("Utter") {
-        MainMenuContent(
-            uiState: .init(
-                isRecording: false,
-                transcriptions: [
-                    .init(timestamp: Date(), text: "Hello, this is a sample transcription"),
-                    .init(timestamp: Date(), text: "Something"),
-                    .init(timestamp: Date(), text: "Another third example but this one is like if you were to ask a long question that spans a few sentences.")
-                ]
-            ),
-            onEvent: { _ in }
-        )
-    }
-    
-    .frame(width: 100)
-}
-
-
-#Preview {
     MainMenuContent(
         uiState: .init(
             isRegisteringHotKey: true,
             isHotKeyPressed: true,
-            isRecording: false,
             transcriptions: [
                 .init(timestamp: Date(), text: "Hello, this is a sample transcription"),
                 .init(timestamp: Date(), text: "Something"),
                 .init(timestamp: Date(), text: "Another third example but this one is like if you were to ask a long question that spans a few sentences.")
-        ]),
+        ],
+        isDownloadingAndLoadingModels: true,
+            ),
         onEvent: { _ in }
-    ).frame(maxWidth: 240)
+    ).frame(maxWidth: 200)
 }
