@@ -1,9 +1,11 @@
-
-![Alt Text](Assets/Icon-512.png)
+<img src="Assets/Icon-512.png" alt="Utter Icon" width="252">
 
 # Utter:
 
 ## An ultra-minimal, offline* speech-to-text status bar utility for MacOS.
+
+<img src="Assets/UtterUI.png" alt="Utter UI">
+
 
 Press a hotkey, speak, automatically paste the transcription into the active app.
 
