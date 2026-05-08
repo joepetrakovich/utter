@@ -21,6 +21,8 @@ Press a hotkey, speak, automatically paste the transcription into the active app
 - The app will request microphone permissions on first use.
 - You'll need to manually add Utter to a Login Item if you'd like it to start on system startup.
 
+_Handcoded with love_
+
 <br /><br />
 <a href="https://fluidinference.com">
   <img src="https://assets.inference.plus/fi-badge.png" alt="Powered by Fluid Inference" height="80">
