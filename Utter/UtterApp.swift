@@ -41,13 +41,12 @@ struct UtterApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra("Utter", image: "MenuBarIcon") {
             MainMenu()
                 .environment(transcriptionViewModel)
                 .modelContainer(sharedModelContainer)
-        } label: {
-            Label("Utter", systemImage: "waveform")
         }
+        
        .menuBarExtraStyle(.window)
     }
 }

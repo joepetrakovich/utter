@@ -23,9 +23,10 @@ struct MainMenuContent: View {
     let uiState: TranscriptionUiState
     let onEvent: (TranscriptionEvent) -> Void
     
+    @State private var isFirstTimeHovered = false
     @State private var showHistory = true
     @FocusState private var isHotkeyFocused: Bool
-    
+
     init(
         uiState: TranscriptionUiState,
         onEvent: @escaping (TranscriptionEvent) -> Void
@@ -36,6 +37,44 @@ struct MainMenuContent: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            
+            if (uiState.isAppRestartRequired) {
+                VStack {
+                    HStack {
+                        Text("First time?")
+                            .foregroundColor(.orange)
+                            .italic()
+                            .frame(minHeight: 28)
+                        
+                        Image(systemName: "questionmark.circle")
+                            .foregroundColor(.orange)
+//                            .popover(isPresented: $isFirstTimeHovered) {
+//                                Text("Enable accessibility permissions to support\na global hotkey and then restart the app.")
+//                                    .padding()
+//                            }
+                        Spacer()
+                        Button("Restart") {
+                            onEvent(.restartAppPressed)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    
+                    if (isFirstTimeHovered) {
+                        Text("Enable accessibility permissions to support a global hotkey and then restart the app.")
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.gray, lineWidth: 2)
+                            ).opacity(0.6)
+                    }
+   
+                }
+                .padding(.horizontal, 8)
+                .onHover { hovering in
+                    isFirstTimeHovered = hovering
+                }
+            }
             
             if uiState.isDownloadingAndLoadingModels {
                 HStack {
@@ -190,6 +229,7 @@ struct MenuLikeButtonStyle: ButtonStyle {
 #Preview {
     MainMenuContent(
         uiState: .init(
+            isAppRestartRequired: true,
             isRegisteringHotKey: true,
             isHotKeyPressed: true,
             transcriptions: [
@@ -197,7 +237,6 @@ struct MenuLikeButtonStyle: ButtonStyle {
                 .init(timestamp: Date(), text: "Something"),
                 .init(timestamp: Date(), text: "Another third example but this one is like if you were to ask a long question that spans a few sentences.")
         ],
-        isDownloadingAndLoadingModels: true,
             ),
         onEvent: { _ in }
     ).frame(maxWidth: 200)

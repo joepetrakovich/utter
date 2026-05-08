@@ -12,6 +12,7 @@ import AppKit
 import SwiftData
 
 enum TranscriptionEvent {
+    case restartAppPressed
     case hotkeyPressed
     case hotkeyReleased
     case historyEntryClicked(entry: Transcription)
@@ -22,6 +23,7 @@ enum TranscriptionEvent {
 }
 
 struct TranscriptionUiState {
+    var isAppRestartRequired: Bool = false
     var isRegisteringHotKey: Bool = false
     var hotKey: String? = nil
     var isHotKeyPressed: Bool = false
@@ -39,6 +41,11 @@ struct TranscriptionUiState {
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        
+        if (!AXIsProcessTrusted()) {
+            uiState.isAppRestartRequired = true
+        }
+        
         uiState.isDownloadingAndLoadingModels = true
         
         Task {
@@ -97,6 +104,8 @@ struct TranscriptionUiState {
             }
         case .registerHotkeyFocusOut:
             uiState.isRegisteringHotKey = false
+        case .restartAppPressed:
+            restartApp()
         }
     }
     
@@ -113,7 +122,7 @@ struct TranscriptionUiState {
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .audio) { granted in
                 if granted {
-                    self.recorder.start()
+                    //self.recorder.start()
                 }
             }
 
@@ -197,7 +206,6 @@ struct TranscriptionUiState {
     private func loadHotKeyState() {
         guard let mask = UserDefaults.standard.object(forKey: "hotKeyModifier") as? UInt,
               let sideRaw = UserDefaults.standard.string(forKey: "hotKeyModifierSide") else {
-            print("guard")
             return
         }
         let modifier = ModifierKey(
@@ -210,13 +218,22 @@ struct TranscriptionUiState {
         else {
             hotKeyRegistrationState.currentState = .registered(modifier, nil)
             uiState.hotKey = modifier.display(includeSide: true)
-            print("guard2")
             return
         }
-        print("here")
 
         hotKeyRegistrationState.currentState = .registered(modifier, NonModifierKey(keyCode: keyCode, character: character))
         uiState.hotKey = modifier.display() + character.uppercased()
+    }
+    
+    func restartApp() {
+        let url = URL(fileURLWithPath: Bundle.main.bundlePath)
+        let configuration = NSWorkspace.OpenConfiguration()
+        
+        NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, _ in
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
+            }
+        }
     }
 }
 
